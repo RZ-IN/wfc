@@ -143,7 +143,7 @@ bool WaveFunctionCollapse::generate()
     while (top >= 0) {
         // fmt::print("stack size: {}\n", top + 1);
         if (ret) --top;
-        else {
+        else [[likely]] {
             auto& [pos, factors, idx, backup] = states[top];
             
             // 复位
@@ -153,10 +153,10 @@ bool WaveFunctionCollapse::generate()
             if (idx == factors.size()) {
                 todo_set_.insert(pos);
                 --top;
-            } else {
+            } else [[likely]] {
                 const Node node(toBitset({factors[idx++]}));
                 if (!diffuse_(pos, node)) continue;
-                if (top == states.size() - 1) {
+                if (top == states.size() - 1) [[unlikely]] {
                     --top;
                     ret = true;
                     continue;
@@ -199,7 +199,7 @@ Generator<std::pair<Int2, WaveFunctionCollapse::FactorType>> WaveFunctionCollaps
     while (top >= 0) {
         // fmt::print("stack size: {}\n", top + 1);
         if (ret) --top;
-        else {
+        else [[likely]] {
             auto& [pos, factors, idx, backup] = states[top];
             
             // 复位
@@ -210,11 +210,11 @@ Generator<std::pair<Int2, WaveFunctionCollapse::FactorType>> WaveFunctionCollaps
                 co_yield std::make_pair(pos, -1);
                 todo_set_.insert(pos);
                 --top;
-            } else {
+            } else [[likely]] {
                 const Node node(toBitset({factors[idx++]}));
                 if (!diffuse_(pos, node)) continue;
                 co_yield std::make_pair(pos, factors[idx - 1]);
-                if (top == states.size() - 1) {
+                if (top == states.size() - 1) [[unlikely]] {
                     --top;
                     ret = true;
                     continue;
@@ -289,10 +289,10 @@ bool WaveFunctionCollapse::diffuse_(Int2 ppos, Node node)
         node.bitset &= valid & getFactorMask();
         if (tmp != node) {
             backup_.emplace(pos, tmp);
-            if (mat_[pos].isEmpty()) {
+            if (mat_[pos].isEmpty()) [[unlikely]] {
                 return false;
             }
-            if (!in_queue.contains(pos)) {
+            if (!in_queue.contains(pos)) [[likely]] {
                 in_queue.insert(pos);
             }
         }
@@ -309,9 +309,9 @@ bool WaveFunctionCollapse::diffuse_(Int2 ppos, Node node)
             queue.pop();
             for (const auto& [dirs, func] : diffuse_funcs_) {
                 for (const Int2 dp : dirs) {
-                    if (const Int2 pos = pp + dp; Int2::Range(size_).contains(pos) && !vis_[pos]) {
+                    if (const Int2 pos = pp + dp; Int2::Range(size_).contains(pos) && !vis_[pos]) [[likely]] {
                         const BitsetType valid = func(mat_[pp].bitset, dp);
-                        if (!update_node(pos, valid)) {
+                        if (!update_node(pos, valid)) [[unlikely]] {
                             for (const auto [pos, node] : backup_) {
                                 mat_[pos] = node;
                                 vis_[pos] = false;

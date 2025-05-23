@@ -74,7 +74,7 @@ public:
     }
 
     constexpr static FactorType toFactor(BitsetType bitset) noexcept {
-        return std::popcount(bitset) == 1 ? std::countr_zero(bitset) : -1;
+        return std::has_single_bit(bitset) ? std::countr_zero(bitset) : -1;
     }
 
 private:

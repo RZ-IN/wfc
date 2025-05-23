@@ -7,13 +7,14 @@
 #include "tools/index2.hpp"
 constexpr bool ASYNC_ON = true;
 constexpr sf::Vector2u TILE_SIZE{16u, 16u};
-constexpr sf::Vector2u MAP_SIZE{32u, 32u};
+constexpr sf::Vector2u MAP_SIZE{64u, 64u};
 constexpr sf::Vector2u SCREEN_SIZE{TILE_SIZE.x * MAP_SIZE.x, TILE_SIZE.y * MAP_SIZE.y};
 constexpr sf::Color BACKGROUND_COLOR(0, 0, 0);
 
 int map[MAP_SIZE.x * MAP_SIZE.y];
 cha::WaveFunctionCollapse wfc(MAP_SIZE.y, MAP_SIZE.x);
 Renderer render;
+bool stop;
 
 
 
@@ -42,18 +43,19 @@ int main()
 
     sf::Clock clock;
     sf::Time timer;
-    constexpr sf::Time FRAME_TIME = sf::milliseconds(10);
+    constexpr sf::Time FRAME_TIME = sf::milliseconds(3);
 
     while (window.isOpen()) {
         while (const std::optional event = window.pollEvent()) {
             handle_event(event, window);
         }
         if (!window.hasFocus()) continue;
-        if (ASYNC_ON) {
+        if constexpr (ASYNC_ON) {
             timer += clock.restart();
             while (timer > FRAME_TIME) {
                 timer -= FRAME_TIME;
-                if (const auto result = get_gen().next()) {
+                if (stop) continue;
+                if (const auto result = get_gen().next()) [[likely]] {
                     const auto [pos, id] = *result;
                     render.setTile({unsigned(pos.x), unsigned(pos.y)}, id);
                 }
@@ -105,7 +107,7 @@ bool init()
     );
 
     wfc.init();
-    if (ASYNC_ON) {
+    if constexpr (ASYNC_ON) {
         for (int i = sizeof (map) / sizeof(map[0]); i--;) {
             map[i] = (-1 + 6) % 6;
         }
@@ -123,7 +125,7 @@ bool init()
             }
         }
         fmt::print("Generation took {}ms\n", clock.getElapsedTime().asMilliseconds());
-        wfc.print();
+        // wfc.print();
     }
 
     if (!render.init("assets/pipe.png", TILE_SIZE)) {
@@ -135,6 +137,8 @@ bool init()
         fmt::print("Failed to load map\n");
         return -1;
     }
+
+    stop = false;
 
     return true;
 }
@@ -230,6 +234,15 @@ void handle_event(std::optional<sf::Event> event, sf::RenderWindow& window)
         }
         default:
             break;
+        }
+    }
+    else if (const auto *key = event->getIf<sf::Event::KeyPressed>()) {
+        if (key->code == sf::Keyboard::Key::Space) {
+            if (stop) {
+                stop = false;
+            } else {
+                stop = true;
+            }
         }
     }
 }

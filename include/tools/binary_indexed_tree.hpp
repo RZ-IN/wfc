@@ -4,6 +4,7 @@
  * Edited on 2025.04.20 by RZIN
  */
 #pragma once
+#include <bit>
 #include <vector>
 #include <iterator>
 #include <concepts>
@@ -80,8 +81,7 @@ public:
     /// @details 该操作的时间复杂度为 O(log n)
     inline int lower(const T x, const std::size_t n) const noexcept {
         T sum = 0;
-        int k = n, i = 0;
-        while (k ^ k & -k) k ^= k & -k;
+        int k = std::bit_floor(n), i = 0;
         for (; k; k >>= 1)
             if (i + k <= n && sum + va_[i + k] < x)
                 sum += va_[i += k];
